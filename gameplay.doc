@@ -1,0 +1,40 @@
+Game Play Instructions
+
+### Starting Out
+
+- On first run, you’ll be prompted to select a **class**: Good, Evil, Beast, Thief, Magical, or Demon.
+- You start with basic stats: Level 1, 100 gold, health, strength.
+
+### Main Menu Actions
+
+- **Find a Fight:** Battle monsters for experience and gold.
+- **Go to the Inn:** Heal, save game, interact, rob, or sleep.
+- **Fight Other Players:** PvP battles (unlocked at level 30).
+- **Dragons Online:** View other online players.
+- **Dragon Scores:** See high scores and top players.
+- **Dragon Journey:** Explore areas, change name (once/30 days), view class status.
+- **Send/Read Messages:** In-game mail with other users.
+- **Dragon Bank:** Deposit, withdraw, transfer gold.
+- **Dragon Weapons/Armory:** Purchase upgrades for attack/defense.
+- **Save and Exit:** Save progress and leave game.
+
+### Classes & Mastery
+
+- Each class has its own progression. Reach level 10 to **master** a class.
+- Master all classes to become the **Top Dragon**.
+
+### Combat
+
+- **Fights:** Turn-based. Choose to attack (normal/special), use items, heal, or run.
+- **Special Attacks:** Limited per day (level * 2).
+- **Resurrections:** Limited to 3 per day.
+
+### Items & Healing
+
+- Use items from inventory (e.g., health potions) to recover health or gain bonuses.
+- Heal by spending gold either directly or at the Inn.
+
+### Gold & Banking
+
+- Earn gold by fighting, exploring, casino games, or random events.
+- Deposit/withdraw/transfer gold in the Dragon Bank.
