@@ -2326,7 +2326,7 @@ function visitIGMs(player) {
 
 // Display welcome screen
 function displayWelcomeScreen() {
-    var welcomeFile = js.exec_dir + "rdq2.ans";
+    var welcomeFile = js.exec_dir + "rdq2.ans"; //Ansi by The Lizard Master of Nite Eyes BBS :)
     if (file_exists(welcomeFile)) {
         console.printfile(welcomeFile);
     } else {
