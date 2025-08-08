@@ -44,11 +44,11 @@ function repeatChar(char, count) {
 
 function getAttackType(player) {
     var maxSpecial = player.level * 2;
-    // Print the prompt on its own line, nicely aligned
-    console.print("\r\nChoose attack type: [N]ormal or [S]pecial (" + player.specialAttacksUsed + "/" + maxSpecial + " remaining)?\r\n");
+    var remaining = maxSpecial - player.specialAttacksUsed;
+    // Show remaining instead of used/total
+    console.print("\r\nChoose attack type: [N]ormal or [S]pecial (" + remaining + " remaining)?\r\n");
     var subAction = console.getstr(1);
     if (!subAction || subAction.trim() === "") {
-        // Default to normal attack if Enter is pressed
         return 'N';
     }
     return subAction.trim().toUpperCase();
@@ -2326,7 +2326,7 @@ function visitIGMs(player) {
 
 // Display welcome screen
 function displayWelcomeScreen() {
-    var welcomeFile = js.exec_dir + "rdq2.ans"; //Ansi by The Lizard Master of Nite Eyes BBS :)
+    var welcomeFile = js.exec_dir + "rdq2.ans";
     if (file_exists(welcomeFile)) {
         console.printfile(welcomeFile);
     } else {
