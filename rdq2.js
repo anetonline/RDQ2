@@ -54,6 +54,29 @@ function getAttackType(player) {
     return subAction.trim().toUpperCase();
 }
 
+function battleEvent(player, enemy) {
+    var eventRoll = Math.random();
+    if (eventRoll < 0.3) {
+        // Healing spring
+        var heal = Math.floor(Math.random() * 20) + 10;
+        player.health += heal;
+        printColor("You stumble upon a healing spring and recover " + heal + " health!", "1;32");
+    } else if (eventRoll < 0.6) {
+        // Gold find
+        var gold = Math.floor(Math.random() * 100) + 20;
+        player.gold += gold;
+        printColor("You find a hidden stash and gain " + gold + " gold!", "1;33");
+    } else if (eventRoll < 0.8) {
+        // Enemy enrages
+        enemy.strength += 2;
+        printColor("The enemy becomes enraged and its strength increases!", "1;31");
+    } else {
+        // Player is inspired
+        player.strength += 2;
+        printColor("You feel a surge of courage! Your strength increases!", "1;36");
+    }
+}
+
 // IGM Base Class
 function IGM(name, description) {
     this.name = name;
@@ -465,6 +488,11 @@ function Player(name, chosenClass) {
     this.health = 100;
     this.strength = 10;
     this.inventory = [];
+    this.skills = ['Heal', 'Fireball', 'Defend'];
+    this.statusEffects = []; // [{type: 'poison', turns: 2, amount: 5}]
+    this.achievements = [];
+    this.pet = null;
+    this.winStreak = 0;
     this.isOnline = false;
     this.specialAttacksUsed = 0;
     this.lastMysticMountainsVisit = null;
@@ -590,11 +618,17 @@ Player.prototype.gainExperience = function(amount) {
 Player.prototype.levelUp = function() {
     this.experience -= this.nextLevelExp;
     this.level += 1;
+
+    if (this.level >= 200) {
+        printColor("You have reached the maximum level! Ascend for extra bonuses!", "1;33");
+    }
+
     this.nextLevelExp = Math.floor(this.nextLevelExp * 1.5);
-    this.health = 100 + this.level * 10 + this.permanentBonuses.healthBonus; // Fixed: was calling resetHealth() which used old formula
+    if (this.nextLevelExp > 2000000000) this.nextLevelExp = 2000000000; // 2 billion max, or pick a sensible cap
+    this.health = 100 + this.level * 10 + this.permanentBonuses.healthBonus;
     this.strength += 2;
     printColor(this.name + " leveled up! Now at level " + this.level + ".", "1;32");
-    
+
     // Check for class mastery at level 10
     if (this.level >= 10) {
         printColor("You have reached maximum level with " + this.chosenClass + "! Time to master this class!", "1;32");
@@ -735,10 +769,28 @@ Player.prototype.checkRetroactiveMastery = function() {
 };
 
 Player.prototype.attack = function(enemy) {
+    // Miss chance
+    if (Math.random() < 0.05) {
+        printColor("You swing and miss!", "1;36");
+        return 0;
+    }
+    // Crit chance
+    var crit = Math.random() < 0.1;
     var baseDamage = Math.floor(Math.random() * (this.strength + this.permanentBonuses.strengthBonus)) + 1;
     var levelBonus = this.level * 0.5;
     var totalDamage = Math.floor(baseDamage + levelBonus);
+    if (crit) {
+        totalDamage *= 2;
+        printColor("Critical hit!", "1;33");
+    }
     enemy.health -= totalDamage;
+
+    // Chance to inflict status effect (if you want)
+    if (Math.random() < 0.05) {
+        enemy.statusEffects.push({type: 'poison', turns: 3, amount: 5});
+        printColor("You poisoned the enemy!", "1;32");
+    }
+
     return totalDamage;
 };
 
@@ -774,14 +826,18 @@ Player.prototype.heal = function(amount) {
 // Enemy Class
 function Enemy(level) {
     var names = [
-        "Dragon Bussey Eater", "John the Golden Dragon", "Dragon Naomi", "Dragon Pete", "Dragon Lauren",
-        "Hairy Monster", "Evil Troll", "Ghost", "Skunk", "Buffalo", "Deer",
-        "Vampire", "Bat", "Rugaru", "ShapeShifter"
+        "Dragon Sting", "John the Golden Dragon", "Dragon Naomi", "Dragon Pete", "Death Dragon",
+        "Hairy Monster", "Evil Troll", "Ghost", "Skunk", "Buffalo", "Zombie",
+        "Vampire", "Bat", "Rugaru", "ShapeShifter", "Vampire xbit", "Dragon Cozmo", "Dragon Code", "Dragon C64"
     ];
     this.name = names[Math.floor(Math.random() * names.length)];
     this.level = level;
     this.health = level * 10;
     this.strength = level * 2;
+    this.statusEffects = [];
+    // Randomly assign special type
+    var types = [null, 'poisonous', 'stunning', 'burning'];
+    this.specialType = types[Math.floor(Math.random() * types.length)];
 }
 
 Enemy.prototype.resetHealth = function() {
@@ -789,16 +845,101 @@ Enemy.prototype.resetHealth = function() {
 };
 
 Enemy.prototype.attack = function(player) {
+    if (Math.random() < 0.05) {
+        printColor("The enemy misses!", "1;36");
+        return 0;
+    }
+    var crit = Math.random() < 0.1;
     var damage = Math.floor(Math.random() * this.strength) + 1;
+    if (crit) {
+        damage *= 2;
+        printColor("Enemy lands a critical hit!", "1;31");
+    }
     player.health -= damage;
+
+    // Special enemy abilities
+    if (this.specialType === 'poisonous' && Math.random() < 0.2) {
+        player.statusEffects.push({type: 'poison', turns: 2, amount: 5});
+        printColor("You are poisoned!", "1;31");
+    }
+    if (this.specialType === 'stunning' && Math.random() < 0.15) {
+        player.statusEffects.push({type: 'stun', turns: 1, amount: 0});
+        printColor("You are stunned and lose your next turn!", "1;31");
+    }
     return damage;
 };
+
+// Player Skill Usage
+function playerUseSkill(player, enemy) {
+    printColor("Choose a skill to use:", "1;33");
+    for (var i = 0; i < player.skills.length; i++) {
+        printColor((i+1) + ". " + player.skills[i], "1;36");
+    }
+    console.print("Select skill number: ");
+    var choice = parseInt(console.getstr(1));
+    if (isNaN(choice) || choice < 1 || choice > player.skills.length) {
+        printColor("Invalid skill!", "1;31");
+        return;
+    }
+    var skill = player.skills[choice-1];
+    switch (skill) {
+        case 'Heal':
+            var healAmount = 30 + player.level * 2;
+            player.health += healAmount;
+            printColor("You cast Heal and recover " + healAmount + " HP!", "1;32");
+            break;
+        case 'Fireball':
+            var dmg = 25 + Math.floor(Math.random() * 20) + player.level;
+            enemy.health -= dmg;
+            printColor("You hurl a Fireball for " + dmg + " damage!", "1;33");
+            if (Math.random() < 0.2) {
+                enemy.statusEffects.push({type: 'burn', turns: 2, amount: 8});
+                printColor("The enemy is burned!", "1;31");
+            }
+            break;
+        case 'Defend':
+            player.statusEffects.push({type: 'defend', turns: 1, amount: 0});
+            printColor("You brace for incoming attacks! (Damage halved next enemy turn)", "1;36");
+            break;
+        default:
+            printColor("Skill not implemented.", "1;31");
+    }
+}
 
 Enemy.prototype.specialAttack = function(player) {
     var damage = Math.floor(Math.random() * this.strength) + this.strength;
     player.health -= damage;
     return damage;
 };
+
+// Status Effect Handler
+function processStatusEffects(entity) {
+    var stillActive = [];
+    for (var i = 0; i < entity.statusEffects.length; i++) {
+        var eff = entity.statusEffects[i];
+        switch (eff.type) {
+            case 'poison':
+                entity.health -= eff.amount;
+                printColor("Poison deals " + eff.amount + " damage!", "1;31");
+                break;
+            case 'burn':
+                entity.health -= eff.amount;
+                printColor("Burn deals " + eff.amount + " damage!", "1;31");
+                break;
+            case 'stun':
+                printColor(entity.name + " is stunned and skips a turn!", "1;31");
+                eff.turns--;
+                if (eff.turns > 0) stillActive.push(eff);
+                continue; // Don't process other effects this turn
+            case 'defend':
+                printColor(entity.name + " is defending (damage halved)!", "1;36");
+                break;
+        }
+        eff.turns--;
+        if (eff.turns > 0) stillActive.push(eff);
+    }
+    entity.statusEffects = stillActive;
+}
 
 // Utility Functions
 function getDateString() {
@@ -1603,7 +1744,8 @@ function inn(player) {
             "  \x01w(4)\x01n \x01gTest your skills at robbing someone\x01n\r\n" +
             "  \x01w(5)\x01n \x01gGet a room \x01w(Cost %s, Safe, Game Saved)\x01n\r\n" +
             "  \x01w(6)\x01n \x01gHead over to other areas\x01n\r\n" +
-            "  \x01w(7)\x01n \x01gLeave the inn\x01n\r\n" +
+            "  \x01w(7)\x01n \x01gRelease your pet into the wild\x01n\r\n" +
+            "  \x01w(8)\x01n \x01gLeave the inn\x01n\r\n" +
             "\x01b" + repeatChar("-", 49) + "\x01n\r\n",
             roomCost.toLocaleString()
         );
@@ -1639,6 +1781,12 @@ function inn(player) {
                 printColor("Gold in Bank: " + player.bankBalance.toLocaleString(), "1;32");
                 printColor("Armor Level: " + player.level, "1;32");
                 printColor("Weapon Level: " + Math.floor(effectiveStrength / 2), "1;32");
+                if (player.pet) {
+                    printColor("Pet: " + player.pet.name +
+                        " (Damage: " + player.pet.damage +
+                        (player.pet.ability ? ", Ability: " + player.pet.ability : "") +
+                        ")", "1;36");
+                }
                 
                 // Show boss victory info if any
                 if (player.bossVictories > 0) {
@@ -1710,8 +1858,24 @@ function inn(player) {
             case '6':
                 visitIGMs(player);
                 break;
-                
+
             case '7':
+                if (player.pet) {
+                    printColor("Your current pet is: " + player.pet.name, "1;33");
+                    console.print("Do you want to release your pet? [Y]es/[N]o: ");
+                    var rel = console.getstr(1);
+                    if (rel && rel.toUpperCase() === 'Y') {
+                        printColor("You released " + player.pet.name + " back into the wild.", "1;31");
+                        player.pet = null;
+                    }
+                } else {
+                    printColor("You don't have a pet.", "1;31");
+                }
+                console.print("Press Enter to continue...");
+                console.getstr();
+                break;
+                
+            case '8':
                 return;
                 
             default:
@@ -1735,23 +1899,23 @@ function journey(player) {
             "  \x01w(5)\x01n \x01gView Class Status\x01n\r\n" +
             "  \x01w(6)\x01n \x01gReturn to main menu\x01n\r\n" +
             "\x01b" + repeatChar("-", 42) + "\x01n\r\n";
-            
+        
         console.print(menu);
         console.print("\x01gChoose an action: \x01n");
         var choice = console.getstr(1);
-        
+
         if (!choice) continue;
-        
+
         switch(choice) {
             case '1':
                 printColor("You venture into the Dark Forest and encounter a wild enemy!", "1;31");
                 if (!specialFightingArea(player)) {
-                player.isOnline = false;
-                player.saveGame();
-                return;
-            }   
-            break;
-                
+                    player.isOnline = false;
+                    player.saveGame();
+                    return;
+                }
+                break;
+
             case '2':
                 var currentDate = getDateString();
                 if (player.lastMysticMountainsVisit === currentDate) {
@@ -1767,19 +1931,20 @@ function journey(player) {
                 console.print("Press Enter to continue...");
                 console.getstr();
                 break;
-                
+
             case '3':
                 printColor("You explore the Abandoned Castle and fight a ghost!", "1;31");
                 if (!specialFightingArea(player)) {
-                player.isOnline = false;
-                player.saveGame();
-                return;
-            }
-            break;
-                
+                    player.isOnline = false;
+                    player.saveGame();
+                    return;
+                }
+                break;
+
             case '4':
                 printColor("Your current level is " + player.level + " and you have " + player.experience + " experience.", "1;32");
                 var expNeeded = player.nextLevelExp - player.experience;
+                if (expNeeded < 0) expNeeded = 0;
                 printColor("You need " + expNeeded + " experience to reach the next level.", "1;32");
                 console.print("Press Enter to continue...");
                 console.getstr();
@@ -1821,9 +1986,10 @@ function journey(player) {
                 console.print("\nPress Enter to continue...");
                 console.getstr();
                 break;
+
             case '6':
                 return;
-                
+
             default:
                 printColor("Invalid choice!", "1;31");
         }
@@ -1838,71 +2004,92 @@ function specialFightingArea(player) {
         console.getstr();
         return;
     }
-    
+
     var currentDate = getDateString();
     if (player.lastSpecialFightingAreaAccess !== currentDate) {
         player.specialFightingAreaAccesses = 0;
         player.lastSpecialFightingAreaAccess = currentDate;
     }
-    
+
     if (player.specialFightingAreaAccesses >= 4) {
         printColor("You can only access the Special Fighting Area 4 times per day. Please try again tomorrow.", "1;31");
         console.print("Press Enter to continue...");
         console.getstr();
         return;
     }
-    
+
     player.specialFightingAreaAccesses += 1;
     player.saveGame();
-    
+
     printColor("\nWelcome to the Special Fighting Area!", "1;31");
     var enemy = new Enemy(player.level + 2);
     enemy.resetHealth();
-    
+
+    // --- Enhanced Battle Loop with RPG Features ---
     while (enemy.health > 0 && player.isAlive() && bbs.online && !js.terminated) {
-        printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
-        console.print("Do you want to [A]ttack, [H]eal, or [R]un? ");
-        var action = console.getstr(1);
-        
-        if (!action) continue;
-        action = action.toUpperCase();
-        
-        if (action === 'A') {
-            var maxSpecial = player.level * 2;
-            var subAction = getAttackType(player);            
-            var damage = 0;
-            if (subAction === 'N') {
-                damage = player.attack(enemy);
-            } else if (subAction === 'S') {
-                damage = player.specialAttack(enemy);
+        // Process player status effects
+        processStatusEffects(player);
+        if (player.statusEffects && player.statusEffects.some(function(e) { return e.type === 'stun'; })) {
+            printColor("You are stunned and lose your turn!", "1;31");
+        } else {
+            printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
+            console.print("Do you want to [A]ttack, [S]kill, [H]eal, or [R]un? ");
+            var action = console.getstr(1);
+            if (!action) continue;
+            action = action.toUpperCase();
+            if (action === 'A') {
+                var damage = player.attack(enemy);
+                printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
+            } else if (action === 'S') {
+                playerUseSkill(player, enemy);
+            } else if (action === 'H') {
+                console.print("Enter the amount to heal (1 gold per hitpoint): ");
+                var healAmountStr = console.getstr(3);
+                var healAmount = parseInt(healAmountStr) || 0;
+                player.heal(healAmount);
+            } else if (action === 'R') {
+                printColor("You ran away!", "1;31");
+                break;
             } else {
-                printColor("Invalid attack type!", "1;31");
+                printColor("Invalid action!", "1;31");
+            }
+        }
+        // Random battle event
+        if (Math.random() < 0.07) battleEvent(player, enemy);
+
+        // Enemy turn
+        if (enemy.health > 0) {
+            processStatusEffects(enemy);
+            if (enemy.statusEffects && enemy.statusEffects.some(function(e) { return e.type === 'stun'; })) {
+                printColor("Enemy is stunned and skips a turn!", "1;31");
                 continue;
             }
-            
-            printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
-            
-            if (enemy.health > 0) {
-                var enemyDamage;
-                if (Math.random() < 0.5) {
-                    enemyDamage = enemy.attack(player);
-                } else {
-                    enemyDamage = enemy.specialAttack(player);
-                }
-                printColor("The enemy attacked you for " + enemyDamage + " damage. Your Health: " + player.health, "1;31");
+            var enemyDamage = enemy.attack(player);
+            if (player.statusEffects && player.statusEffects.some(function(e) { return e.type === 'defend'; })) {
+                enemyDamage = Math.floor(enemyDamage / 2);
             }
-        } else if (action === 'H') {
-            console.print("Enter the amount to heal (1 gold per hitpoint): ");
-            var healAmountStr = console.getstr(3);
-            var healAmount = parseInt(healAmountStr) || 0;
-            player.heal(healAmount);
-        } else if (action === 'R') {
-            printColor("You ran away!", "1;31");
-            break;
-        } else {
-            printColor("Invalid action!", "1;31");
+            printColor("The enemy attacked you for " + enemyDamage + " damage. Your Health: " + player.health, "1;31");
         }
-        
+
+        if (player.pet && Math.random() < 0.4) {
+            var petDamage = player.pet.damage + Math.floor(Math.random() * 5);
+            enemy.health -= petDamage;
+            printColor("Your pet " + player.pet.name + " attacks and deals " + petDamage + " damage!", "1;36");
+            if (player.pet.ability === "heal" && Math.random() < 0.15) {
+                var heal = 10 + Math.floor(Math.random() * 10);
+                player.health += heal;
+                printColor("Your pet " + player.pet.name + " heals you for " + heal + " HP!", "1;32");
+            }
+            if (player.pet.ability === "burn" && Math.random() < 0.1) {
+                enemy.statusEffects.push({type: 'burn', turns: 2, amount: 8});
+                printColor("Your pet's fire burns the enemy!", "1;31");
+            }
+            if (player.pet.ability === "dodge" && Math.random() < 0.1) {
+                player.statusEffects.push({type: 'defend', turns: 1, amount: 0});
+                printColor("Your pet helps you dodge—damage halved next attack!", "1;36");
+            }
+        }
+
         // Check if player died
         if (player.health <= 0) {
             if (!player.handlePlayerDeath()) {
@@ -1913,16 +2100,47 @@ function specialFightingArea(player) {
             break;
         }
     }
-    
+
     if (player.isAlive() && enemy.health <= 0) {
         printColor("You defeated the enemy!", "1;32");
         var expReward = Math.floor(player.level * 10 * player.permanentBonuses.experienceMultiplier);
         var goldReward = Math.floor(player.level * 5 * player.permanentBonuses.goldMultiplier);
         player.experience += expReward;
         player.gold += goldReward;
+        player.winStreak = (player.winStreak || 0) + 1;
+        printColor("Current win streak: " + player.winStreak, "1;36");
+        if (player.winStreak === 5) {
+            printColor("Achievement unlocked: 5-win streak!", "1;33");
+            if (!player.achievements) player.achievements = [];
+            player.achievements.push("5-win streak");
+        }
+        // Random item drop
+        if (Math.random() < 0.2) {
+            var items = ["Healing Potion", "Strength Elixir", "Gemstone"];
+            var drop = items[Math.floor(Math.random() * items.length)];
+            if (!player.inventory) player.inventory = [];
+            player.inventory.push(drop);
+            printColor("You found a " + drop + "!", "1;33");
+        }
+        // --- Pet Acquisition ---
+        if (!player.pet && Math.random() < 0.05) {
+            var petList = [
+                {name: "Baby Dragon", damage: 12, ability: "heal"},
+                {name: "Fire Lizard", damage: 15, ability: "burn"},
+                {name: "Battle Hamster", damage: 8, ability: null},
+                {name: "Shadow Cat", damage: 10, ability: "dodge"}
+            ];
+            var chosenPet = petList[Math.floor(Math.random() * petList.length)];
+            player.pet = chosenPet;
+            printColor("Congratulations! You befriended a pet: " + chosenPet.name + "!", "1;33");
+            printColor("It will now help you in battle.", "1;33");
+        }
+
         player.saveGame();
+    } else {
+        player.winStreak = 0;
     }
-    
+
     console.print("Press Enter to continue...");
     console.getstr();
     return true;
@@ -2411,16 +2629,16 @@ function main() {
         // Player chose to quit from welcome screen
         return;
     }
-    
+
     var playerName = user.alias;
     var player = Player.loadGame(playerName);
-    
+
     if (!player) {
         printColor("Welcome! Creating a new game for " + playerName + ".", "1;32");
         player = new Player(playerName);
         player.saveGame();
     }
-    
+
     // Check if player is dead from previous session
     if (!player.checkDeadPlayerOnEntry()) {
         // Player is dead and chose not to resurrect or has no resurrections
@@ -2428,12 +2646,12 @@ function main() {
         player.saveGame();
         return;
     }
-    
+
     player.checkRetroactiveMastery();
-    
+
     player.isOnline = true;
     player.saveGame();
-    
+
     // Main game loop
     while (bbs.online && !js.terminated) {
         clearScreen();
@@ -2442,23 +2660,23 @@ function main() {
             player.dailyResurrections = 0;
             player.lastRestrictionDate = currentDate;
         }
-        
+
         if (player.dailyResurrections >= 3) {
             printColor("You have reached the maximum number of resurrections for today. Please try again tomorrow.", "1;31");
             player.isOnline = false;
             player.saveGame();
             break;
         }
-        
+
         var numMessages = getMessageCount(playerName);
         displayMainMenu(numMessages, player);
         var choice = console.getstr(2);
-        
+
         if (!choice) continue;
-        
+
         // Trigger random events
         triggerRandomEvent(player);
-        
+
         switch(choice) {
             case '1':
                 // Find a Fight
@@ -2467,10 +2685,10 @@ function main() {
                     player.dailyFights = 0;
                     player.lastFightDate = currentDate;
                 }
-                
+
                 // Check if boss fight is available
                 var bossCheck = canFightBoss(player);
-                
+
                 if (bossCheck.canFight) {
                     // Show boss option
                     clearScreen();
@@ -2480,10 +2698,10 @@ function main() {
                     printColor("(3) Return to main menu", "1;36");
                     printColor("", "1;37");
                     printColor("Regular fights remaining today: " + (20 - player.dailyFights), "1;33");
-                    
+
                     console.print("Choose your battle: ");
                     var fightChoice = console.getstr(1);
-                    
+
                     if (fightChoice === '2') {
                         fightAncientDragonLord(player);
                         break;
@@ -2500,7 +2718,7 @@ function main() {
                     console.print("Press Enter to continue to regular fights...");
                     console.getstr();
                 }
-                
+
                 // Regular fight logic
                 if (player.dailyFights >= 20) {
                     printColor("You have reached the maximum number of fights for today. Please try again tomorrow.", "1;31");
@@ -2509,96 +2727,145 @@ function main() {
                 } else {
                     player.dailyFights += 1;
                     player.saveGame();
-                    
+
                     var enemy = new Enemy(player.level);
                     enemy.resetHealth();
                     printColor("You are fighting " + enemy.name + "!", "1;34");
-                    
+
+                    // --- Enhanced Battle Loop with RPG Features ---
                     while (enemy.health > 0 && player.isAlive() && bbs.online && !js.terminated) {
-                        printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
-                        console.print("Do you want to [A]ttack, [H]eal, or [R]un? ");
-                        var action = console.getstr(1);
-                        
-                        if (!action) continue;
-                        action = action.toUpperCase();
-                        
-                        if (action === 'A') {
-                            var maxSpecial = player.level * 2;
-                            var subAction = getAttackType(player);
-                            var damage = 0;
-                            if (subAction === 'N') {
-                                damage = player.attack(enemy);
-                            } else if (subAction === 'S') {
-                                damage = player.specialAttack(enemy);
+                        // Process player status effects
+                        processStatusEffects(player);
+                        if (player.statusEffects && player.statusEffects.some(function(e) { return e.type === 'stun'; })) {
+                            printColor("You are stunned and lose your turn!", "1;31");
+                        } else {
+                            printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
+                            console.print("Do you want to [A]ttack, [S]kill, [H]eal, or [R]un? ");
+                            var action = console.getstr(1);
+                            if (!action) continue;
+                            action = action.toUpperCase();
+                            if (action === 'A') {
+                                var damage = player.attack(enemy);
+                                printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
+                            } else if (action === 'S') {
+                                playerUseSkill(player, enemy);
+                            } else if (action === 'H') {
+                                console.print("Enter the amount to heal (1 gold per hitpoint): ");
+                                var healAmountStr = console.getstr(3);
+                                var healAmount = parseInt(healAmountStr) || 0;
+                                player.heal(healAmount);
+                            } else if (action === 'R') {
+                                printColor("You ran away!", "1;31");
+                                break;
                             } else {
-                                printColor("Invalid attack type!", "1;31");
+                                printColor("Invalid action!", "1;31");
+                            }
+                        }
+                        // Random battle event
+                        if (Math.random() < 0.07) battleEvent(player, enemy);
+
+                        // Enemy turn
+                        if (enemy.health > 0) {
+                            processStatusEffects(enemy);
+                            if (enemy.statusEffects && enemy.statusEffects.some(function(e) { return e.type === 'stun'; })) {
+                                printColor("Enemy is stunned and skips a turn!", "1;31");
                                 continue;
                             }
-                            
-                            printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
-                            
-                            if (enemy.health > 0) {
-                                var enemyDamage;
-                                if (Math.random() < 0.5) {
-                                    enemyDamage = enemy.attack(player);
-                                } else {
-                                    enemyDamage = enemy.specialAttack(player);
-                                }
-                                printColor("The enemy attacked you for " + enemyDamage + " damage. Your Health: " + player.health, "1;31");
-                                
-                                // Check if player died
-                                if (player.health <= 0) {
-                                    if (!player.handlePlayerDeath()) {
-                                        // Player is dead and chose not to resurrect or has no resurrections
-                                        player.isOnline = false;
-                                        player.saveGame();
-                                        return;
-                                    }
-                                    // Player resurrected, break out of this fight
-                                    break;
-                                }
+                            var enemyDamage = enemy.attack(player);
+                            if (player.statusEffects && player.statusEffects.some(function(e) { return e.type === 'defend'; })) {
+                                enemyDamage = Math.floor(enemyDamage / 2);
                             }
-                        } else if (action === 'H') {
-                            console.print("Enter the amount to heal (1 gold per hitpoint): ");
-                            var healAmountStr = console.getstr(3);
-                            var healAmount = parseInt(healAmountStr) || 0;
-                            player.heal(healAmount);
-                        } else if (action === 'R') {
-                            printColor("You ran away!", "1;31");
+                            printColor("The enemy attacked you for " + enemyDamage + " damage. Your Health: " + player.health, "1;31");
+                        }
+
+                        if (player.pet && Math.random() < 0.4) {
+                            var petDamage = player.pet.damage + Math.floor(Math.random() * 5);
+                            enemy.health -= petDamage;
+                            printColor("Your pet " + player.pet.name + " attacks and deals " + petDamage + " damage!", "1;36");
+                            if (player.pet.ability === "heal" && Math.random() < 0.15) {
+                                var heal = 10 + Math.floor(Math.random() * 10);
+                                player.health += heal;
+                                printColor("Your pet " + player.pet.name + " heals you for " + heal + " HP!", "1;32");
+                            }
+                            if (player.pet.ability === "burn" && Math.random() < 0.1) {
+                                enemy.statusEffects.push({type: 'burn', turns: 2, amount: 8});
+                                printColor("Your pet's fire burns the enemy!", "1;31");
+                            }
+                            if (player.pet.ability === "dodge" && Math.random() < 0.1) {
+                                player.statusEffects.push({type: 'defend', turns: 1, amount: 0});
+                                printColor("Your pet helps you dodge—damage halved next attack!", "1;36");
+                            }
+                        }
+
+                        // Check for player death
+                        if (player.health <= 0) {
+                            if (!player.handlePlayerDeath()) {
+                                player.isOnline = false;
+                                player.saveGame();
+                                return;
+                            }
                             break;
-                        } else {
-                            printColor("Invalid action!", "1;31");
                         }
                     }
-                    
+
                     if (player.isAlive() && enemy.health <= 0) {
                         printColor("You defeated the enemy!", "1;32");
                         var expReward = Math.floor(player.level * 10 * player.permanentBonuses.experienceMultiplier);
                         var goldReward = Math.floor(player.level * 5 * player.permanentBonuses.goldMultiplier);
                         player.experience += expReward;
                         player.gold += goldReward;
+                        player.winStreak = (player.winStreak || 0) + 1;
+                        printColor("Current win streak: " + player.winStreak, "1;36");
+                        if (player.winStreak === 5) {
+                            printColor("Achievement unlocked: 5-win streak!", "1;33");
+                            if (!player.achievements) player.achievements = [];
+                            player.achievements.push("5-win streak");
+                        }
+                        // Random item drop
+                        if (Math.random() < 0.2) {
+                            var items = ["Healing Potion", "Strength Elixir", "Gemstone"];
+                            var drop = items[Math.floor(Math.random() * items.length)];
+                            if (!player.inventory) player.inventory = [];
+                            player.inventory.push(drop);
+                            printColor("You found a " + drop + "!", "1;33");
+                        }
+                        // --- Pet Acquisition ---
+                        if (!player.pet && Math.random() < 0.05) {
+                            var petList = [
+                                {name: "Baby Dragon", damage: 12, ability: "heal"},
+                                {name: "Fire Lizard", damage: 15, ability: "burn"},
+                                {name: "Battle Hamster", damage: 8, ability: null},
+                                {name: "Shadow Cat", damage: 10, ability: "dodge"}
+                            ];
+                            var chosenPet = petList[Math.floor(Math.random() * petList.length)];
+                            player.pet = chosenPet;
+                            printColor("Congratulations! You befriended a pet: " + chosenPet.name + "!", "1;33");
+                            printColor("It will now help you in battle.", "1;33");
+                        }
                         player.saveGame();
                         console.print("Press Enter to continue...");
                         console.getstr();
+                    } else {
+                        player.winStreak = 0;
                     }
                 }
                 break;
-                
+
             case '2':
                 // Go to Inn
                 inn(player);
                 break;
-                
+
             case '3':
                 // Fight Other Players - NOW CALLS THE PROPER PvP FUNCTION
                 fightOtherPlayers(player);
                 break;
-                
+
             case '4':
                 // Dragons Online
                 listPlayersOnline();
                 break;
-                
+
             case '5':
                 // Dragon Scores
                 clearScreen();
@@ -2606,59 +2873,59 @@ function main() {
                 printColor("(1) Regular High Scores", "1;32");
                 printColor("(2) Hall of Heroes", "1;33");
                 printColor("(3) Return to main menu", "1;36");
-                
+
                 console.print("Choose display: ");
                 var scoreChoice = console.getstr(1);
-                
+
                 if (scoreChoice === '1') {
                     showHighScores();
                 } else if (scoreChoice === '2') {
                     showHallOfHeroes();
                 }
                 break;
-                
+
             case '6':
                 // Dragon Journey
                 journey(player);
                 break;
-                
+
             case '7':
                 // Send Message
                 sendMessage();
                 break;
-                
+
             case '8':
                 // Read Messages
                 readMessages();
                 break;
-                
+
             case '9':
                 // Dragon Bank
                 bank(player);
                 break;
-                
+
             case '10':
                 // Dragon Weapons
                 dragonWeapons(player);
                 break;
-                
+
             case '11':
                 // Dragon Armory
                 dragonArmor(player);
                 break;
-                
+
             case '12':
                 // Save and Exit
                 player.isOnline = false;
                 player.saveGame();
                 printColor("Game saved. Goodbye!", "1;32");
                 return;
-                
+
             default:
                 printColor("Invalid choice! Returning to main menu.", "1;31");
         }
     }
-    
+
     // Cleanup on exit
     player.isOnline = false;
     player.saveGame();
