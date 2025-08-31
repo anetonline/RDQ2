@@ -261,7 +261,7 @@ LostAndFoundIGM.prototype.enter = function(player) {
     printColor("\n" + repeatChar("-", 50), "1;34");
     printColor("                  LOST & FOUND", "1;34");
     printColor(repeatChar("-", 50), "1;34");
-    printColor("Do you want to [1] Check for lost items or [2] Turn in a found item? (3 to leave)", "1;36");
+    printColor("Do you want to [1] Check for lost items or [2] Turn in a found item? (3 Leave)", "1;36");
     var ans = console.getstr(1);
     if (ans === "1") {
         var foundItems = [
@@ -428,15 +428,16 @@ TavernIGM.prototype.enter = function(player) {
     while (bbs.online && !js.terminated) {
         clearScreen();
         var menu =
-            "\r\n" + repeatChar("-", 50) + "\r\n" +
-            "                  Dragon Tavern\r\n" +
-            repeatChar("-", 50) + "\r\n" +
-            "  (1) Hear a Rumor\r\n" +
-            "  (2) Tell a Joke\r\n" +
-            "  (3) Have a Drink (Cost 15 gold)\r\n" +
-            "  (4) Leave Tavern\r\n" +
-            repeatChar("-", 50) + "\r\n";
+            "\r\n\x01b" + repeatChar("-", 50) + "\x01n\r\n" +
+            "                  \x01r\x01hDragon Tavern\x01n\r\n" +
+            "\x01b" + repeatChar("-", 50) + "\x01n\r\n" +
+            "  \x01w(1)\x01n \x01gHear a Rumor\x01n\r\n" +
+            "  \x01w(2)\x01n \x01gTell a Joke\x01n\r\n" +
+            "  \x01w(3)\x01n \x01gHave a Drink\x01n \x01w(Cost 15 gold)\x01n\r\n" +
+            "  \x01w(4)\x01n \x01gLeave Tavern\x01n\r\n" +
+            "\x01b" + repeatChar("-", 50) + "\x01n\r\n";
         console.print(menu);
+        console.print("\x01gChoose an action: \x01n");
         var choice = console.getstr(1);
 
         if (choice === '1') {
