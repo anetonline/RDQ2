@@ -86,7 +86,338 @@ function IGM(name, description) {
 IGM.prototype.enter = function(player) {
     throw new Error("This method should be overridden by subclasses");
 };
+// FortuneTeller IGM
+function FortuneTellerIGM() {
+    IGM.call(this, "Fortune Teller's Tent", "Seek your fortune... for a price!");
+}
+FortuneTellerIGM.prototype = Object.create(IGM.prototype);
+FortuneTellerIGM.prototype.constructor = FortuneTellerIGM;
 
+FortuneTellerIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;33");
+    printColor("         FORTUNE TELLER'S TENT", "1;33");
+    printColor(repeatChar("-", 50), "1;33");
+    var cost = 40;
+    printColor("The mysterious fortune teller will reveal your destiny for " + cost + " gold.", "1;32");
+    printColor("Do you wish to proceed? [Y]es/[N]o", "1;36");
+    var ans = console.getstr(1);
+    if (!ans || ans.toUpperCase() !== "Y") {
+        printColor("You leave the tent, your future still uncertain.", "1;34");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    if (player.gold < cost) {
+        printColor("You do not have enough gold!", "1;31");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    player.gold -= cost;
+
+    var fortunes = [
+        function(p) { printColor("Beware the next castle you enter...", "1;31"); },
+        function(p) { printColor("Good luck follows you! (+15 gold)", "1;32"); p.gold += 15; },
+        function(p) { printColor("A lost friend will return. (+10 health)", "1;33"); p.health += 10; },
+        function(p) { printColor("A shadowy figure steals from you. (-10 gold)", "1;31"); p.gold = Math.max(0, p.gold - 10); },
+        function(p) { printColor("You will soon find a rare treasure.", "1;32"); if (!p.inventory) p.inventory = []; p.inventory.push("Mystery Scroll"); },
+        function(p) { printColor("You feel stronger! (+1 strength)", "1;33"); p.strength += 1; },
+        function(p) { printColor("You are cursed! (-5 health)", "1;31"); p.health = Math.max(1, p.health - 5); }
+    ];
+    var chosen = fortunes[Math.floor(Math.random() * fortunes.length)];
+    chosen(player);
+
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// AlchemistIGM
+function AlchemistLabIGM() {
+    IGM.call(this, "Alchemist's Lab", "Mix potions for random effects!");
+}
+AlchemistLabIGM.prototype = Object.create(IGM.prototype);
+AlchemistLabIGM.prototype.constructor = AlchemistLabIGM;
+
+AlchemistLabIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;35");
+    printColor("                ALCHEMIST'S LAB", "1;35");
+    printColor(repeatChar("-", 50), "1;35");
+    printColor("The mad alchemist offers to mix you a potion for 25 gold. Proceed? [Y]es/[N]o", "1;36");
+    var ans = console.getstr(1);
+    if (!ans || ans.toUpperCase() !== "Y") {
+        printColor("You step back from the bubbling cauldrons.", "1;34");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    if (player.gold < 25) {
+        printColor("You do not have enough gold!", "1;31");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    player.gold -= 25;
+    var effects = [
+        function(p){ p.health += 18; printColor("You feel much better! (+18 health)", "1;32"); },
+        function(p){ p.strength += 2; printColor("You feel powerful! (+2 strength)", "1;33"); },
+        function(p){ p.gold += 30; printColor("Gold bubbles up from the flask! (+30 gold)", "1;32"); },
+        function(p){ p.health = Math.max(1, p.health - 12); printColor("Uh oh! You feel sick. (-12 health)", "1;31"); },
+        function(p){ printColor("Nothing seems to happen...", "1;34"); },
+        function(p){ p.experience += 15; printColor("Wisdom floods your mind. (+15 exp)", "1;32"); }
+    ];
+    var chosen = effects[Math.floor(Math.random() * effects.length)];
+    chosen(player);
+
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// WishingWell IGM
+function WishingWellIGM() {
+    IGM.call(this, "Wishing Well", "Toss gold for a magical wish!");
+}
+WishingWellIGM.prototype = Object.create(IGM.prototype);
+WishingWellIGM.prototype.constructor = WishingWellIGM;
+
+WishingWellIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;34");
+    printColor("                  WISHING WELL", "1;34");
+    printColor(repeatChar("-", 50), "1;34");
+    printColor("Toss in 20 gold and make a wish? [Y]es/[N]o", "1;36");
+    var ans = console.getstr(1);
+    if (!ans || ans.toUpperCase() !== "Y") {
+        printColor("You decide not to tempt fate.", "1;33");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    if (player.gold < 20) {
+        printColor("You don't have enough gold!", "1;31");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    player.gold -= 20;
+    var wishes = [
+        function(p){ p.gold += 50; printColor("A wind blows. +50 gold!", "1;33"); },
+        function(p){ p.health += 10; printColor("You feel refreshed! +10 health.", "1;32"); },
+        function(p){ p.strength += 1; printColor("You feel stronger! +1 strength.", "1;33"); },
+        function(p){ p.experience += 8; printColor("You feel wiser. +8 experience.", "1;32"); },
+        function(p){ printColor("Nothing happens. The magic is fickle...", "1;34"); },
+        function(p){ var loss = 10 + Math.floor(Math.random() * 20); p.gold = Math.max(0, p.gold - loss); printColor("A cold breeze... you lose " + loss + " gold!", "1;31"); }
+    ];
+    var chosen = wishes[Math.floor(Math.random() * wishes.length)];
+    chosen(player);
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// ThievesGuild IGM
+function ThievesGuildIGM() {
+    IGM.call(this, "Thieves' Guild", "Risk a heist for gold!");
+}
+ThievesGuildIGM.prototype = Object.create(IGM.prototype);
+ThievesGuildIGM.prototype.constructor = ThievesGuildIGM;
+
+ThievesGuildIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;31");
+    printColor("                 THIEVES' GUILD", "1;31");
+    printColor(repeatChar("-", 50), "1;31");
+    printColor("Attempt a risky heist? [Y]es/[N]o", "1;36");
+    var ans = console.getstr(1);
+    if (!ans || ans.toUpperCase() !== "Y") {
+        printColor("You slip away quietly...", "1;34");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    var chance = Math.random();
+    if (chance < 0.4) {
+        var gold = 30 + Math.floor(Math.random() * 70);
+        printColor("Success! You steal " + gold + " gold!", "1;33");
+        player.gold += gold;
+    } else {
+        var penalty = 20 + Math.floor(Math.random() * 30);
+        printColor("Caught! You pay a fine of " + penalty + " gold.", "1;31");
+        player.gold = Math.max(0, player.gold - penalty);
+    }
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// Lost&Found IGM
+function LostAndFoundIGM() {
+    IGM.call(this, "Lost & Found", "Check for or turn in lost items.");
+}
+LostAndFoundIGM.prototype = Object.create(IGM.prototype);
+LostAndFoundIGM.prototype.constructor = LostAndFoundIGM;
+
+LostAndFoundIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;34");
+    printColor("                  LOST & FOUND", "1;34");
+    printColor(repeatChar("-", 50), "1;34");
+    printColor("Do you want to [1] Check for lost items or [2] Turn in a found item? (3 to leave)", "1;36");
+    var ans = console.getstr(1);
+    if (ans === "1") {
+        var foundItems = [
+            { name: "Old Coin", reward: 10 },
+            { name: "Silver Ring", reward: 25 },
+            { name: "Dragon Scale", reward: 45 },
+            { name: "Potion Vial", reward: 15 }
+        ];
+        var item = foundItems[Math.floor(Math.random() * foundItems.length)];
+        printColor("You rummage and find a " + item.name + "!", "1;32");
+        printColor("You turn it in and receive " + item.reward + " gold.", "1;33");
+        player.gold += item.reward;
+    } else if (ans === "2") {
+        if (player.inventory && player.inventory.length > 0) {
+            printColor("Your inventory:", "1;36");
+            for (var i = 0; i < player.inventory.length; i++) {
+                printColor("  (" + (i + 1) + ") " + player.inventory[i], "1;32");
+            }
+            printColor("  (0) Cancel", "1;31");
+            console.print("Select an item to turn in: ");
+            var sellStr = console.getstr(2);
+            var idx = parseInt(sellStr);
+            if (!isNaN(idx) && idx > 0 && idx <= player.inventory.length) {
+                var chosen = player.inventory[idx - 1];
+                var reward = 12 + Math.floor(Math.random() * 25);
+                printColor("You turn in " + chosen + " and receive " + reward + " gold.", "1;33");
+                player.gold += reward;
+                player.inventory.splice(idx - 1, 1);
+            }
+        } else {
+            printColor("You have nothing to turn in.", "1;31");
+        }
+    } else {
+        printColor("You leave the Lost & Found.", "1;34");
+        return;
+    }
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// PuzzelRoom IGM
+function PuzzleRoomIGM() {
+    IGM.call(this, "Puzzle Room", "Solve a riddle for a reward!");
+}
+PuzzleRoomIGM.prototype = Object.create(IGM.prototype);
+PuzzleRoomIGM.prototype.constructor = PuzzleRoomIGM;
+
+PuzzleRoomIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;36");
+    printColor("                   PUZZLE ROOM", "1;36");
+    printColor(repeatChar("-", 50), "1;36");
+
+    // One puzzle per visit - can randomize more
+    var riddles = [
+        { q: "What walks on four legs in the morning, two legs at noon, and three legs in the evening?", a: "man" },
+        { q: "I speak without a mouth and hear without ears. What am I?", a: "echo" },
+        { q: "What has keys but can't open locks?", a: "piano" },
+        { q: "I am not alive, but I can grow; I don't have lungs, but I need air. What am I?", a: "fire" }
+    ];
+    var puzzle = riddles[Math.floor(Math.random() * riddles.length)];
+    printColor("Riddle:", "1;33");
+    printColor(puzzle.q, "1;33");
+    console.print("Your answer: ");
+    var answer = console.getstr(20);
+    if (answer && answer.trim().toLowerCase() === puzzle.a) {
+        printColor("Correct! You receive a reward.", "1;32");
+        var reward = Math.random();
+        if (reward < 0.33) { player.gold += 30; printColor("+30 gold!", "1;33"); }
+        else if (reward < 0.66) { player.health += 10; printColor("+10 health!", "1;33"); }
+        else { player.experience += 10; printColor("+10 experience!", "1;33"); }
+    } else {
+        printColor("Incorrect. The spirits remain silent.", "1;31");
+    }
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// Arena IGM
+function ArenaIGM() {
+    IGM.call(this, "Dragon Arena", "Fight for glory and gold in the Arena!");
+}
+ArenaIGM.prototype = Object.create(IGM.prototype);
+ArenaIGM.prototype.constructor = ArenaIGM;
+
+ArenaIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;31");
+    printColor("                  DRAGON ARENA", "1;31");
+    printColor(repeatChar("-", 50), "1;31");
+    printColor("Do you wish to face a random champion? [Y]es/[N]o", "1;36");
+    var ans = console.getstr(1);
+    if (!ans || ans.toUpperCase() !== "Y") {
+        printColor("You leave the arena stands.", "1;34");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+    var championNames = ["Fangor the Bold", "Mira the Swift", "Gronk the Destroyer", "Elira the Serpent", "Shadowclaw"];
+    var champion = {
+        name: championNames[Math.floor(Math.random() * championNames.length)],
+        level: player.level + Math.floor(Math.random() * 4) - 2,
+        health: 60 + player.level * 9 + Math.floor(Math.random() * 50),
+        strength: 8 + player.level + Math.floor(Math.random() * 5)
+    };
+    printColor("You face " + champion.name + "!", "1;33");
+    printColor("Level: " + champion.level + ", Health: " + champion.health + ", Strength: " + champion.strength, "1;32");
+    console.print("Press Enter to begin battle...");
+    console.getstr();
+
+    // Simple battle loop
+    while (champion.health > 0 && player.health > 0 && bbs.online && !js.terminated) {
+        printColor("Your HP: " + player.health + "   " + champion.name + " HP: " + champion.health, "1;36");
+        console.print("[A]ttack, [H]eal, [R]un: ");
+        var action = console.getstr(1);
+        if (!action) continue;
+        action = action.toUpperCase();
+        if (action === "A") {
+            var dmg = Math.floor(Math.random() * (player.strength + 2)) + 5;
+            champion.health -= dmg;
+            printColor("You strike for " + dmg + " damage!", "1;32");
+        } else if (action === "H") {
+            if (player.gold >= 10) {
+                player.gold -= 10;
+                player.health += 18;
+                printColor("You heal for 18 HP.", "1;32");
+            } else {
+                printColor("Not enough gold to heal!", "1;31");
+            }
+        } else if (action === "R") {
+            printColor("You flee the arena!", "1;34");
+            break;
+        } else {
+            printColor("Invalid action!", "1;31");
+            continue;
+        }
+        if (champion.health > 0) {
+            var champDmg = Math.floor(Math.random() * (champion.strength + 1)) + 4;
+            player.health -= champDmg;
+            printColor(champion.name + " hits you for " + champDmg + " damage!", "1;31");
+        }
+    }
+    if (player.health <= 0) {
+        printColor("You are defeated and carried from the arena!", "1;31");
+        player.health = 1;
+    } else if (champion.health <= 0) {
+        var goldPrize = 70 + Math.floor(Math.random() * 60);
+        printColor("Victory! You win " + goldPrize + " gold!", "1;33");
+        player.gold += goldPrize;
+        player.experience += 25;
+    }
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// Tavern IGM
 function TavernIGM() {
     IGM.call(this, "Dragon Tavern", "Relax, hear rumors, or share a drink.");
 }
@@ -130,7 +461,7 @@ TavernIGM.prototype.enter = function(player) {
         console.getstr();
     }
 };
-
+// Market IGM
 function MarketIGM() {
     IGM.call(this, "Dragon Market", "Buy and sell rare and useful items!");
 }
@@ -231,6 +562,98 @@ MarketIGM.prototype.enter = function(player) {
         console.print("Press Enter to continue...");
         console.getstr();
     }
+};
+// Adoption IGM
+function BabyDragonAdoptionIGM() {
+    IGM.call(this, "Baby Dragon Adoption", "Adopt a magical baby dragon companion!");
+}
+BabyDragonAdoptionIGM.prototype = Object.create(IGM.prototype);
+BabyDragonAdoptionIGM.prototype.constructor = BabyDragonAdoptionIGM;
+
+BabyDragonAdoptionIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;34");
+    printColor("         BABY DRAGON ADOPTION CENTER", "1;34");
+    printColor(repeatChar("-", 50), "1;34");
+
+    if (player.pet) {
+        printColor("You already have a pet: " + player.pet.name, "1;33");
+        printColor("You must release your current pet before adopting another.", "1;31");
+        console.print("Press Enter to return...");
+        console.getstr();
+        return;
+    }
+
+    var babyDragons = [
+        {name: "Ruby", color: "Red", damage: 12, ability: "heal"},
+        {name: "Ember", color: "Orange", damage: 14, ability: "burn"},
+        {name: "Mist", color: "Blue", damage: 10, ability: "dodge"},
+        {name: "Thorn", color: "Green", damage: 11, ability: "poison"},
+        {name: "Shadow", color: "Black", damage: 13, ability: "stealth"}
+    ];
+
+    printColor("Available baby dragons for adoption:", "1;32");
+    for (var i = 0; i < babyDragons.length; i++) {
+        printColor("  (" + (i + 1) + ") " + babyDragons[i].name + " (" + babyDragons[i].color + 
+            ") - Damage: " + babyDragons[i].damage + ", Special: " + babyDragons[i].ability, "1;36");
+    }
+    printColor("  (0) Return to Inn", "1;31");
+    printColor(repeatChar("-", 50), "1;34");
+    console.print("Select a dragon to adopt (1-" + babyDragons.length + "): ");
+    var choiceStr = console.getstr(1);
+    var choice = parseInt(choiceStr);
+    if (isNaN(choice) || choice < 0 || choice > babyDragons.length) {
+        printColor("Invalid choice!", "1;31");
+        console.print("Press Enter to continue...");
+        console.getstr();
+        return;
+    }
+    if (choice === 0) return;
+
+    var selected = babyDragons[choice - 1];
+    player.pet = {name: selected.name + " the " + selected.color + " Dragon", damage: selected.damage, ability: selected.ability};
+    printColor("Congratulations! You adopted " + player.pet.name + "!", "1;32");
+    printColor("It will now help you in battle with its ability: " + selected.ability, "1;33");
+    player.saveGame();
+    console.print("Press Enter to return...");
+    console.getstr();
+};
+// Graveyard IGM
+function GraveyardIGM() {
+    IGM.call(this, "Graveyard", "Visit the resting place of fallen dragons.");
+}
+GraveyardIGM.prototype = Object.create(IGM.prototype);
+GraveyardIGM.prototype.constructor = GraveyardIGM;
+
+GraveyardIGM.prototype.enter = function(player) {
+    clearScreen();
+    printColor("\n" + repeatChar("-", 50), "1;34");
+    printColor("                THE GRAVEYARD", "1;34");
+    printColor(repeatChar("-", 50), "1;34");
+    printColor("Here lie the names of dragons who have fallen in battle.", "1;32");
+
+    // List dead players from save files
+    var fallen = [];
+    var saveFiles = directory(SAVE_DIR + "*.json");
+    if (saveFiles) {
+        for (var i = 0; i < saveFiles.length; i++) {
+            var filename = saveFiles[i];
+            var p = Player.loadGame(file_getname(filename).replace('.json',''));
+            if (p && p.health <= 0) {
+                fallen.push(p.name + " - " + (p.chosenClass || "Unknown Class") + " (Level " + (p.level || "?") + ")");
+            }
+        }
+    }
+    if (fallen.length === 0) {
+        printColor("No dragons rest here... yet.", "1;33");
+    } else {
+        for (var j = 0; j < fallen.length && j < 20; j++) {
+            printColor((j+1) + ". " + fallen[j], "1;31");
+        }
+    }
+    printColor(repeatChar("-", 50), "1;34");
+    console.print("Press Enter to return...");
+    console.getstr();
 };
 
 // Casino IGM
@@ -618,7 +1041,16 @@ Player.prototype.checkDeadPlayerOnEntry = function() {
 var casinoIGM = new CasinoIGM();
 var tavernIGM = new TavernIGM();
 var marketIGM = new MarketIGM();
-var igms = [casinoIGM, tavernIGM, marketIGM];
+var babyDragonAdoptionIGM = new BabyDragonAdoptionIGM();
+var graveyardIGM = new GraveyardIGM();
+var fortuneTellerIGM = new FortuneTellerIGM();
+var arenaIGM = new ArenaIGM();
+var puzzleRoomIGM = new PuzzleRoomIGM();
+var alchemistLabIGM = new AlchemistLabIGM();
+var lostAndFoundIGM = new LostAndFoundIGM();
+var thievesGuildIGM = new ThievesGuildIGM();
+var wishingWellIGM = new WishingWellIGM();
+var igms = [arenaIGM, graveyardIGM, casinoIGM, tavernIGM, marketIGM, wishingWellIGM, puzzleRoomIGM, alchemistLabIGM, fortuneTellerIGM, thievesGuildIGM, lostAndFoundIGM, babyDragonAdoptionIGM];
 
 // Player Class
 function Player(name, chosenClass) {
@@ -2703,13 +3135,17 @@ function visitIGMs(player) {
             "            \x01r\x01hMore areas to discover\x01n\r\n" +
             "\x01b" + repeatChar("-", 50) + "\x01n\r\n";
         for (var i = 0; i < igms.length; i++) {
-            menu += "  \x01w(" + (i + 1) + ")\x01n \x01g" + igms[i].name + "\x01n\r\n";
+            var n = (i + 1);
+            var nStr = n < 10 ? " " + n : n; // Adds a space for single digits
+            menu += " \x01w(" + nStr + ")\x01n \x01g" + igms[i].name + "\x01n\r\n";
         }
-        menu += "  \x01w(" + (igms.length + 1) + ")\x01n \x01gReturn to Main Menu\x01n\r\n";
+        var retNum = igms.length + 1;
+        var retStr = retNum < 10 ? " " + retNum : retNum;
+        menu += " \x01w(" + retStr + ")\x01n \x01gReturn to Main Menu\x01n\r\n";
         menu += "\x01b" + repeatChar("-", 50) + "\x01n\r\n";
         console.print(menu);
         console.print("\x01gChoose an IGM to visit: \x01n");
-        var choiceStr = console.getstr(1);
+        var choiceStr = console.getstr(4);
         var choice = parseInt(choiceStr);
         if (isNaN(choice) || choice < 1 || choice > igms.length + 1) {
             printColor("Invalid choice!", "1;31");
