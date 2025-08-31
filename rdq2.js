@@ -1897,7 +1897,8 @@ function journey(player) {
             "  \x01w(3)\x01n \x01gAbandoned Castle\x01n\r\n" +
             "  \x01w(4)\x01n \x01gCheck Level and Experience\x01n\r\n" +
             "  \x01w(5)\x01n \x01gView Class Status\x01n\r\n" +
-            "  \x01w(6)\x01n \x01gReturn to main menu\x01n\r\n" +
+            "  \x01w(6)\x01n \x01gLevel Up (if ready)\x01n\r\n" +
+            "  \x01w(7)\x01n \x01gReturn to main menu\x01n\r\n" +
             "\x01b" + repeatChar("-", 42) + "\x01n\r\n";
         
         console.print(menu);
@@ -1995,6 +1996,23 @@ function journey(player) {
                 break;
 
             case '6':
+                if (player.experience >= player.nextLevelExp) {
+                    var prevLevel = player.level;
+                    var prevExp = player.experience;
+                    player.levelUp();
+                    printColor("You have leveled up to level " + player.level + "!", "1;32");
+                    printColor("Experience carried over: " + player.experience + " / " + player.nextLevelExp, "1;32");
+                    player.saveGame();
+                } else {
+                    printColor("You do not have enough experience to level up.", "1;31");
+                    var expNeeded = player.nextLevelExp - player.experience;
+                    printColor("You need " + expNeeded + " more experience.", "1;33");
+                }
+                console.print("Press Enter to continue...");
+                console.getstr();
+                break;
+
+            case '7':
                 return;
 
             default:
