@@ -1944,8 +1944,11 @@ function journey(player) {
             case '4':
                 printColor("Your current level is " + player.level + " and you have " + player.experience + " experience.", "1;32");
                 var expNeeded = player.nextLevelExp - player.experience;
-                if (expNeeded < 0) expNeeded = 0;
-                printColor("You need " + expNeeded + " experience to reach the next level.", "1;32");
+                if (expNeeded <= 0) {
+                    printColor("You are ready to level up!", "1;32");
+                } else {
+                    printColor("You need " + expNeeded + " experience to reach the next level.", "1;32");
+                }
                 console.print("Press Enter to continue...");
                 console.getstr();
                 break;
@@ -1959,7 +1962,11 @@ function journey(player) {
                 printColor("Experience: " + player.experience + " / " + player.nextLevelExp, "1;32");
                 if (player.level < 10) {
                     var expNeeded = player.nextLevelExp - player.experience;
-                    printColor("Experience needed to master this class: " + expNeeded, "1;33");
+                    if (expNeeded <= 0) {
+                        printColor("You are ready to level up or master this class!", "1;33");
+                    } else {
+                        printColor("Experience needed to master this class: " + expNeeded, "1;33");
+                    }
                 } else {
                     printColor("This class is ready to be mastered!", "1;32");
                 }
