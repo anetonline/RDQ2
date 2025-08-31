@@ -87,6 +87,152 @@ IGM.prototype.enter = function(player) {
     throw new Error("This method should be overridden by subclasses");
 };
 
+function TavernIGM() {
+    IGM.call(this, "Dragon Tavern", "Relax, hear rumors, or share a drink.");
+}
+TavernIGM.prototype = Object.create(IGM.prototype);
+TavernIGM.prototype.constructor = TavernIGM;
+
+TavernIGM.prototype.enter = function(player) {
+    while (bbs.online && !js.terminated) {
+        clearScreen();
+        var menu =
+            "\r\n" + repeatChar("-", 50) + "\r\n" +
+            "                  Dragon Tavern\r\n" +
+            repeatChar("-", 50) + "\r\n" +
+            "  (1) Hear a Rumor\r\n" +
+            "  (2) Tell a Joke\r\n" +
+            "  (3) Have a Drink (Cost 15 gold)\r\n" +
+            "  (4) Leave Tavern\r\n" +
+            repeatChar("-", 50) + "\r\n";
+        console.print(menu);
+        var choice = console.getstr(1);
+
+        if (choice === '1') {
+            printColor("You overhear: 'The castle is haunted by a golden ghost!'", "1;33");
+        } else if (choice === '2') {
+            printColor("You tell a joke. Everyone groans.", "1;32");
+        } else if (choice === '3') {
+            if (player.gold >= 15) {
+                player.gold -= 15;
+                player.health += 5;
+                printColor("You enjoy a drink and gain 5 health.", "1;32");
+            } else {
+                printColor("Not enough gold!", "1;31");
+            }
+        } else if (choice === '4') {
+            printColor("You leave the tavern.", "1;32");
+            return;
+        } else {
+            printColor("Invalid choice!", "1;31");
+        }
+        console.print("Press Enter to continue...");
+        console.getstr();
+    }
+};
+
+function MarketIGM() {
+    IGM.call(this, "Dragon Market", "Buy and sell rare and useful items!");
+}
+MarketIGM.prototype = Object.create(IGM.prototype);
+MarketIGM.prototype.constructor = MarketIGM;
+
+MarketIGM.prototype.enter = function(player) {
+    var itemsForSale = [
+        {name: "Healing Potion", price: 50, effect: function(p) { p.health += 30; printColor("You feel rejuvenated! (+30 health)", "1;32"); }},
+        {name: "Strength Elixir", price: 120, effect: function(p) { p.strength += 3; printColor("You feel stronger! (+3 strength)", "1;33"); }},
+        {name: "Mystery Gem", price: 200, effect: function(p) {
+            var rand = Math.random();
+            if (rand < 0.5) {
+                var gold = Math.floor(Math.random() * 200) + 50;
+                p.gold += gold;
+                printColor("The gem shimmers and you find " + gold + " gold inside!", "1;33");
+            } else {
+                p.health += 10;
+                p.strength += 1;
+                printColor("The gem pulses with energy (+10 health, +1 strength)", "1;32");
+            }
+        }}
+    ];
+
+    while (bbs.online && !js.terminated) {
+        clearScreen();
+        printColor("\n" + repeatChar("-", 50), "1;34");
+        printColor("          DRAGON MARKET", "1;34");
+        printColor(repeatChar("-", 50), "1;34");
+        printColor("Gold on hand: " + player.gold.toLocaleString() + "\n", "1;33");
+        printColor("Items for sale:", "1;32");
+        for (var i = 0; i < itemsForSale.length; i++) {
+            printColor("  (" + (i + 1) + ") " + itemsForSale[i].name + " - " + itemsForSale[i].price + " gold", "1;32");
+        }
+        printColor("  (" + (itemsForSale.length + 1) + ") Sell an item from your inventory", "1;36");
+        printColor("  (" + (itemsForSale.length + 2) + ") Leave the market", "1;31");
+        printColor(repeatChar("-", 50), "1;34");
+        console.print("Choose an option: ");
+        var choiceStr = console.getstr(1);
+        var choice = parseInt(choiceStr);
+
+        if (isNaN(choice) || choice < 1 || choice > itemsForSale.length + 2) {
+            printColor("Invalid choice!", "1;31");
+            continue;
+        }
+        if (choice >= 1 && choice <= itemsForSale.length) {
+            var item = itemsForSale[choice - 1];
+            if (player.gold >= item.price) {
+                player.gold -= item.price;
+                if (!player.inventory) player.inventory = [];
+                player.inventory.push(item.name);
+                printColor("You bought a " + item.name + "!", "1;32");
+                // Auto-use certain items on purchase (optional)
+                if (item.effect) item.effect(player);
+            } else {
+                printColor("You don't have enough gold!", "1;31");
+            }
+        } else if (choice === itemsForSale.length + 1) {
+            // Sell from inventory
+            if (!player.inventory || player.inventory.length === 0) {
+                printColor("You have no items to sell!", "1;31");
+                console.print("Press Enter to continue...");
+                console.getstr();
+                continue;
+            }
+            printColor("Your inventory:", "1;36");
+            for (var j = 0; j < player.inventory.length; j++) {
+                printColor("  (" + (j + 1) + ") " + player.inventory[j], "1;32");
+            }
+            printColor("  (0) Cancel", "1;31");
+            console.print("Select an item to sell: ");
+            var sellStr = console.getstr(2);
+            var sellIdx = parseInt(sellStr);
+            if (isNaN(sellIdx) || sellIdx < 0 || sellIdx > player.inventory.length) {
+                printColor("Invalid choice!", "1;31");
+                continue;
+            }
+            if (sellIdx === 0) continue;
+            var sellItem = player.inventory[sellIdx - 1];
+            var sellPrice = 0;
+            // Set a sell price based on item type
+            for (var k = 0; k < itemsForSale.length; k++) {
+                if (itemsForSale[k].name === sellItem) {
+                    sellPrice = Math.floor(itemsForSale[k].price * 0.7); // 70% of buy price
+                    break;
+                }
+            }
+            if (sellPrice === 0) sellPrice = 20; // Default for unknown items
+            player.gold += sellPrice;
+            printColor("You sold " + sellItem + " for " + sellPrice + " gold.", "1;33");
+            player.inventory.splice(sellIdx - 1, 1);
+        } else if (choice === itemsForSale.length + 2) {
+            printColor("You leave the Dragon Market.", "1;32");
+            player.saveGame();
+            break;
+        }
+        player.saveGame();
+        console.print("Press Enter to continue...");
+        console.getstr();
+    }
+};
+
 // Casino IGM
 function CasinoIGM() {
     IGM.call(this, "Dragon Casino", "Try your luck at various games of chance!");
@@ -468,9 +614,11 @@ Player.prototype.checkDeadPlayerOnEntry = function() {
     return true; // Player is alive
 };
 
-// Create casino IGM instance
+// IGMs
 var casinoIGM = new CasinoIGM();
-var igms = [casinoIGM];
+var tavernIGM = new TavernIGM();
+var marketIGM = new MarketIGM();
+var igms = [casinoIGM, tavernIGM, marketIGM];
 
 // Player Class
 function Player(name, chosenClass) {
@@ -1373,7 +1521,7 @@ function fightOtherPlayers(player) {
     }
     
     if (player.dailyPvpFights >= 10) {
-        printColor("You have reached the maximum number of PvP fights for today (10). Please try again tomorrow.", "1;31");
+        printColor("You have reached the maximum number of PvP fights for today (10). Try again tomorrow.", "1;31");
         console.print("Press Enter to continue...");
         console.getstr();
         return;
@@ -1920,7 +2068,7 @@ function journey(player) {
             case '2':
                 var currentDate = getDateString();
                 if (player.lastMysticMountainsVisit === currentDate) {
-                    printColor("You can only visit the Mystic Mountains once per day. Please try again tomorrow.", "1;31");
+                    printColor("You can only visit the Mystic Mountains once per day. Try again tomorrow.", "1;31");
                 } else {
                     printColor("You climb the Mystic Mountains and find hidden treasures!", "1;32");
                     var goldReward = Math.floor(50 * player.permanentBonuses.goldMultiplier);
@@ -2037,7 +2185,7 @@ function specialFightingArea(player) {
     }
 
     if (player.specialFightingAreaAccesses >= 4) {
-        printColor("You can only access the Special Fighting Area 4 times per day. Please try again tomorrow.", "1;31");
+        printColor("You can only access the Special Fighting Area 4 times per day. Try again tomorrow.", "1;31");
         console.print("Press Enter to continue...");
         console.getstr();
         return;
@@ -2553,22 +2701,22 @@ function visitIGMs(player) {
         var menu = 
             "\r\n\x01b" + repeatChar("-", 50) + "\x01n\r\n" +
             "            \x01r\x01hMore areas to discover\x01n\r\n" +
-            "\x01b" + repeatChar("-", 50) + "\x01n\r\n" +
-            "  \x01w(1)\x01n \x01gDragon Casino\x01n\r\n" +
-            "  \x01w(2)\x01n \x01gReturn to Main Menu\x01n\r\n" +
             "\x01b" + repeatChar("-", 50) + "\x01n\r\n";
-            
+        for (var i = 0; i < igms.length; i++) {
+            menu += "  \x01w(" + (i + 1) + ")\x01n \x01g" + igms[i].name + "\x01n\r\n";
+        }
+        menu += "  \x01w(" + (igms.length + 1) + ")\x01n \x01gReturn to Main Menu\x01n\r\n";
+        menu += "\x01b" + repeatChar("-", 50) + "\x01n\r\n";
         console.print(menu);
         console.print("\x01gChoose an IGM to visit: \x01n");
-        var choice = console.getstr(1);
-        
-        if (choice === '1') {
-            casinoIGM.enter(player);
-        } else if (choice === '2') {
-            break;
-        } else {
+        var choiceStr = console.getstr(1);
+        var choice = parseInt(choiceStr);
+        if (isNaN(choice) || choice < 1 || choice > igms.length + 1) {
             printColor("Invalid choice!", "1;31");
+            continue;
         }
+        if (choice === igms.length + 1) break;
+        igms[choice - 1].enter(player);
     }
 }
 
@@ -2692,7 +2840,7 @@ function main() {
         }
 
         if (player.dailyResurrections >= 3) {
-            printColor("You have reached the maximum number of resurrections for today. Please try again tomorrow.", "1;31");
+            printColor("You have reached the maximum number of resurrections for today. Try again tomorrow.", "1;31");
             player.isOnline = false;
             player.saveGame();
             break;
@@ -2751,7 +2899,7 @@ function main() {
 
                 // Regular fight logic
                 if (player.dailyFights >= 20) {
-                    printColor("You have reached the maximum number of fights for today. Please try again tomorrow.", "1;31");
+                    printColor("You have reached the maximum number of fights for today. Try again tomorrow.", "1;31");
                     console.print("Press Enter to continue...");
                     console.getstr();
                 } else {
