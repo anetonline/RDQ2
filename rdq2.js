@@ -2058,7 +2058,7 @@ function specialFightingArea(player) {
             printColor("You are stunned and lose your turn!", "1;31");
         } else {
             printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
-            console.print("Do you want to [A]ttack, [S]kill, [H]eal, or [R]un? ");
+            console.print("Do you want to [A]ttack, [S]kill, [P] Special Attack, [H]eal, or [R]un? ");
             var action = console.getstr(1);
             if (!action) continue;
             action = action.toUpperCase();
@@ -2067,6 +2067,11 @@ function specialFightingArea(player) {
                 printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
             } else if (action === 'S') {
                 playerUseSkill(player, enemy);
+            } else if (action === 'P') {
+                var damage = player.specialAttack(enemy);
+                if (damage > 0) {
+                    printColor("You used a special attack for " + damage + " damage!", "1;33");
+                }
             } else if (action === 'H') {
                 console.print("Enter the amount to heal (1 gold per hitpoint): ");
                 var healAmountStr = console.getstr(3);
@@ -2765,7 +2770,7 @@ function main() {
                             printColor("You are stunned and lose your turn!", "1;31");
                         } else {
                             printColor("Player Health: " + player.health + ", Enemy Health: " + enemy.health, "1;34");
-                            console.print("Do you want to [A]ttack, [S]kill, [H]eal, or [R]un? ");
+                            console.print("Do you want to [A]ttack, [S]kill, [P] Special Attack, [H]eal, or [R]un? ");
                             var action = console.getstr(1);
                             if (!action) continue;
                             action = action.toUpperCase();
@@ -2774,6 +2779,11 @@ function main() {
                                 printColor("You attacked the enemy for " + damage + " damage. Enemy Health: " + enemy.health, "1;32");
                             } else if (action === 'S') {
                                 playerUseSkill(player, enemy);
+                            } else if (action === 'P') {
+                                var damage = player.specialAttack(enemy);
+                                if (damage > 0) {
+                                    printColor("You used a special attack for " + damage + " damage!", "1;33");
+                                }
                             } else if (action === 'H') {
                                 console.print("Enter the amount to heal (1 gold per hitpoint): ");
                                 var healAmountStr = console.getstr(3);
