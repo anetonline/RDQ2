@@ -1954,7 +1954,7 @@ function fightOtherPlayers(player) {
     }
     
     if (player.dailyPvpFights >= 10) {
-        printColor("You have reached the maximum number of PvP fights for today (10). Try again tomorrow.", "1;31");
+        printColor("You have reached the maximum number of PvP fights for today (10). Try tomorrow.", "1;31");
         console.print("Press Enter to continue...");
         console.getstr();
         return;
@@ -2501,7 +2501,7 @@ function journey(player) {
             case '2':
                 var currentDate = getDateString();
                 if (player.lastMysticMountainsVisit === currentDate) {
-                    printColor("You can only visit the Mystic Mountains once per day. Try again tomorrow.", "1;31");
+                    printColor("You can only visit the Mystic Mountains once per day. Try tomorrow.", "1;31");
                 } else {
                     printColor("You climb the Mystic Mountains and find hidden treasures!", "1;32");
                     var goldReward = Math.floor(50 * player.permanentBonuses.goldMultiplier);
@@ -2618,7 +2618,7 @@ function specialFightingArea(player) {
     }
 
     if (player.specialFightingAreaAccesses >= 4) {
-        printColor("You can only access the Special Fighting Area 4 times per day. Try again tomorrow.", "1;31");
+        printColor("You can only access the Special Fighting Area 4 times per day. Try tomorrow.", "1;31");
         console.print("Press Enter to continue...");
         console.getstr();
         return;
@@ -3277,7 +3277,7 @@ function main() {
         }
 
         if (player.dailyResurrections >= 3) {
-            printColor("You have reached the maximum number of resurrections for today. Try again tomorrow.", "1;31");
+            printColor("You have reached the maximum number of resurrections for today. Try tomorrow.", "1;31");
             player.isOnline = false;
             player.saveGame();
             break;
@@ -3336,7 +3336,7 @@ function main() {
 
                 // Regular fight logic
                 if (player.dailyFights >= 20) {
-                    printColor("You have reached the maximum number of fights for today. Try again tomorrow.", "1;31");
+                    printColor("You have reached the maximum number of fights for today. Try tomorrow.", "1;31");
                     console.print("Press Enter to continue...");
                     console.getstr();
                 } else {
